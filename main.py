@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from expense.routes import router as expense_routers
+from user.routes import router as user_routers
 
 
 @asynccontextmanager
@@ -29,3 +30,4 @@ app = FastAPI(
 
 
 app.include_router(expense_routers)
+app.include_router(user_routers)

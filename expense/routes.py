@@ -2,11 +2,13 @@ from fastapi import APIRouter, Path, Depends, HTTPException, Body, Query, status
 from fastapi.responses import JSONResponse
 from expense.schemas import *
 from expense.models import ExpenseModel
+from user.models import UserModel
 from sqlalchemy.orm import Session
 from core.database import get_db
 from typing import List
+from auth.jwt_auth import get_authenticated_user
 
-router = APIRouter(tags=["Expense"])
+router = APIRouter(tags=["Expense"], prefix="/expense")
 
 
 @router.get("/Expense", response_model=List[ExpenseResponseSchema])
@@ -22,8 +24,9 @@ async def retrieve_expense_list(
         default=0, ge=0, description="Number of items to skip before returning results"
     ),
     db: Session = Depends(get_db),
+    user: UserModel = Depends(get_authenticated_user),
 ):
-    query = db.query(ExpenseModel)
+    query = db.query(ExpenseModel).filter_by(user_id=user.id)
     if category is not None:
         query = query.filter(ExpenseModel.category.ilike(category))
     return query.limit(limit).offset(offset).all()
@@ -37,8 +40,9 @@ async def retrieve_expense_detail(
         description="It will be searched with the title you provided",
     ),
     db: Session = Depends(get_db),
+    user: UserModel = Depends(get_authenticated_user),
 ):
-    query = db.query(ExpenseModel).filter_by(id=expense_id).first()
+    query = db.query(ExpenseModel).filter_by(user_id=user.id, id=expense_id).first()
     if not query:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found"
@@ -47,10 +51,17 @@ async def retrieve_expense_detail(
 
 
 @router.post(
-    "/Expense", response_model=ExpenseCreateSchema, status_code=status.HTTP_201_CREATED
+    "/Expense",
+    response_model=ExpenseResponseSchema,
+    status_code=status.HTTP_201_CREATED,
 )
-async def create_expense(request: ExpenseCreateSchema, db: Session = Depends(get_db)):
+async def create_expense(
+    request: ExpenseCreateSchema,
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(get_authenticated_user),
+):
     data = request.model_dump()
+    data.update({"user_id": user.id})
     expense_obj = ExpenseModel(**data)
     db.add(expense_obj)
     db.commit()
@@ -71,8 +82,9 @@ async def update_expense(
         gt=0,
     ),
     db: Session = Depends(get_db),
+    user: UserModel = Depends(get_authenticated_user),
 ):
-    expense = db.query(ExpenseModel).filter_by(id=expense_id).first()
+    expense = db.query(ExpenseModel).filter_by(user_id=user.id, id=expense_id).first()
     if not expense:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found"
@@ -87,9 +99,13 @@ async def update_expense(
 
 @router.delete("/Expense/{expense_id}")
 async def deleting_expense(
-    expense_id: int = Path(..., gt=0), db: Session = Depends(get_db)
+    expense_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+    user: UserModel = Depends(get_authenticated_user),
 ):
-    expense = db.query(ExpenseModel).filter_by(id=expense_id).one_or_none()
+    expense = (
+        db.query(ExpenseModel).filter_by(user_id=user.id, id=expense_id).one_or_none()
+    )
     if expense:
         db.delete(expense)
         db.commit()
