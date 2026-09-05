@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from expense.routes import router as expense_routers
 
 
 @asynccontextmanager
@@ -25,3 +26,6 @@ app = FastAPI(
     lifespan=lifespan,
     openapi_tags=metadata_tags,
 )
+
+
+app.include_router(expense_routers)

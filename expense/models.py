@@ -15,6 +15,7 @@ from sqlalchemy.orm import relationship
 
 class ExpenseModel(Base):
     __tablename__ = "expense"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     title = Column(String(150), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
