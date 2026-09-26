@@ -4,7 +4,7 @@ from sqlalchemy import (
     String,
     Integer,
     Boolean,
-    DATETIME,
+    DateTime,
     ForeignKey,
 )
 from core.database import Base
@@ -18,13 +18,18 @@ class UserModel(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+
     username = Column(String(250), nullable=False, unique=True)
+    email = Column(String(250), nullable=False , unique=True)
+
+
     password = Column(String, nullable=True)
 
     is_active = Column(Boolean, default=True)
 
-    created_at = Column(DATETIME, server_default=func.now())
-    updated_at = Column(DATETIME, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     expense = relationship("ExpenseModel", back_populates="user")
 
@@ -45,6 +50,6 @@ class TokenModel(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     token = Column(String, nullable=False, unique=True)
-    created_at = Column(DATETIME, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
 
     user = relationship("UserModel", uselist=False)

@@ -5,7 +5,7 @@ from sqlalchemy import (
     Integer,
     Boolean,
     Text,
-    DATETIME,
+    DateTime,
     ForeignKey,
     Numeric,
 )
@@ -21,9 +21,9 @@ class ExpenseModel(Base):
     title = Column(String(150), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
     category = Column(String(150), nullable=True)
-    description = Column(Text(500), nullable=True)
+    description = Column(String(500), nullable=True)
 
-    created_at = Column(DATETIME, server_default=func.now())
-    updated_at = Column(DATETIME, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     user = relationship("UserModel", back_populates="expense", uselist=False)
