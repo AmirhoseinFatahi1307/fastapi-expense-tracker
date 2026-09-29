@@ -19,10 +19,8 @@ class UserModel(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-
     username = Column(String(250), nullable=False, unique=True)
-    email = Column(String(250), nullable=False , unique=True)
-
+    email = Column(String(250), nullable=False, unique=True)
 
     password = Column(String, nullable=True)
 
@@ -32,6 +30,12 @@ class UserModel(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     expense = relationship("ExpenseModel", back_populates="user")
+
+    refresh_tokens = relationship(
+        "RefreshTokenModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     def hash_password(self, plain_password: str) -> str:
         return pwd_context.hash(plain_password)
@@ -43,13 +47,19 @@ class UserModel(Base):
         self.password = self.hash_password(plain_text)
 
 
-class TokenModel(Base):
-    __tablename__ = "token"
+class RefreshTokenModel(Base):
+    __tablename__ = "refresh_tokens"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
 
-    token = Column(String, nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    jti = Column(String(64), nullable=False, unique=True)
+
+    expires_at = Column(DateTime, nullable=False)
+
+    revoked = Column(Boolean, default=False, nullable=False)
+
     created_at = Column(DateTime, server_default=func.now())
 
-    user = relationship("UserModel", uselist=False)
+    user = relationship("UserModel", back_populates="refresh_tokens")

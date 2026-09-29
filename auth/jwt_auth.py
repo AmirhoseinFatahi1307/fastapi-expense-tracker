@@ -1,22 +1,24 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, status, Cookie
 from user.models import UserModel
 from core.database import get_db
 from sqlalchemy.orm import Session
+import uuid
 from datetime import datetime, timedelta, timezone
 import jwt
 from jwt.exceptions import InvalidSignatureError, DecodeError
 from core.config import settings
 
-security = HTTPBearer()
-
 
 def get_authenticated_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    access_token: str | None = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-
-    token = credentials.credentials
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication Failed, access token not found",
+        )
+    token = access_token
     try:
         decoded = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = decoded.get("user_id", None)
@@ -75,16 +77,22 @@ def generate_access_token(user_id: int, expires_in: int = 300) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 
-def generate_refresh_token(user_id: int, expires_in: int = 3600 * 24) -> str:
-
+def generate_refresh_token(
+    user_id: int, expires_in: int = 3600 * 24
+) -> tuple[str, str, datetime]:
     now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(seconds=expires_in)
+    jti = str(uuid.uuid4())
+
     payload = {
         "type": "refresh",
         "user_id": user_id,
+        "jti": jti,
         "iat": now,
-        "exp": now + timedelta(seconds=expires_in),
+        "exp": expires_at,
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+    token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+    return token, jti, expires_at
 
 
 def decode_refresh_token(token):
